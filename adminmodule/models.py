@@ -27,7 +27,6 @@ class StaffManager(UserManager):
 
 
 class Staff(AbstractUser):
-    # Remove Django's first_name and last_name fields
     first_name = None
     last_name = None
 
@@ -44,6 +43,17 @@ class Staff(AbstractUser):
     address = models.TextField()
     doj = models.DateField()
     salary = models.DecimalField(max_digits=10, decimal_places=2)
+
+    REQUIRED_FIELDS = [
+        "email",
+        "full_name",
+        "dob",
+        "phone",
+        "gender",
+        "address",
+        "doj",
+        "salary",
+    ]
 
     objects = StaffManager()
 
