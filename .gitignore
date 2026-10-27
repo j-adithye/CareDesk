@@ -1,4 +1,9 @@
-.venv
+__pycache__/
+*.py[cod]
+.venv/
 
-.pycache
-__pychache__
+*/migrations/
+__pycache__
+/__pycache__
+.vscode
+

@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser,UserManager
 from django.db import models
 
 
@@ -10,12 +10,32 @@ class Role(models.Model):
         return self.title
 
 
+class StaffManager(UserManager):
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        role, _ = Role.objects.get_or_create(title="Admin")
+
+        extra_fields["roleid"] = role
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        return super().create_superuser(
+            username=username,
+            email=email,
+            password=password,
+            **extra_fields
+        )
+
+
 class Staff(AbstractUser):
-    # AbstractUser already gives: username, password (hashed), is_active
     first_name = None
     last_name = None
 
-    roleid = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="staff")
+    roleid = models.ForeignKey(
+        Role,
+        on_delete=models.PROTECT,
+        related_name="staff"
+    )
+
     full_name = models.CharField(max_length=100)
     dob = models.DateField()
     phone = models.CharField(max_length=15)
@@ -24,9 +44,21 @@ class Staff(AbstractUser):
     doj = models.DateField()
     salary = models.DecimalField(max_digits=10, decimal_places=2)
 
+    REQUIRED_FIELDS = [
+        "email",
+        "full_name",
+        "dob",
+        "phone",
+        "gender",
+        "address",
+        "doj",
+        "salary",
+    ]
+
+    objects = StaffManager()
+
     def __str__(self):
         return self.full_name
-
 
 class Weekday(models.Model):
     name = models.CharField(max_length=10, unique=True)
