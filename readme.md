@@ -3,6 +3,12 @@
 ## Step 1: Create and Activate a Virtual Environment
 
 Create a virtual environment and activate it before installing the project dependencies.
+```
+python -m venv .venv
+```
+```
+.venv/scripts/Activate
+```
 
 Install the required dependencies by running the following command in the terminal:
 
