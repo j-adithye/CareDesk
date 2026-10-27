@@ -3,6 +3,7 @@ from django.db import models
 
 
 class Role(models.Model):
+    roleid = models.AutoField(primary_key=True)
     title = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
@@ -14,7 +15,7 @@ class Staff(AbstractUser):
     first_name = None
     last_name = None
 
-    role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="staff")
+    roleid = models.ForeignKey(Role, on_delete=models.PROTECT, related_name="staff")
     full_name = models.CharField(max_length=100)
     dob = models.DateField()
     phone = models.CharField(max_length=15)
