@@ -7,7 +7,7 @@ Create a virtual environment and activate it before installing the project depen
 python -m venv .venv
 ```
 ```
-.venv/scripts/Activate
+.\.venv\Scripts\Activate
 ```
 
 Install the required dependencies by running the following command in the terminal:
