@@ -22,7 +22,7 @@ urlpatterns = [
     
     path('api/admin',include('adminmodule.urls')),
     path('api/doctor',include('doctormodule.urls')),
-    path('api/lab',include('labmodule.urls')),
+    path('api/lab/', include('labmodule.urls')),
     path('api/receptionist',include('receptionistmodule.urls')),
     path('api/pharmacist',include('pharmacistmodule.urls')),
 ]
