@@ -135,3 +135,15 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "adminmodule.Staff"
+
+REST_FRAMEWORK = {                         # Django REST Framework reads its global settings from this dict
+    'DEFAULT_AUTHENTICATION_CLASSES': (    # HOW the API finds out who is calling
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # Reads the "Authorization: Bearer <token>" header, checks the token,
+        # and loads the matching Staff user into request.user
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (        # WHAT every endpoint requires by default
+        'rest_framework.permissions.IsAuthenticated',
+        # The caller must be logged in, otherwise the API returns 401
+    ),
+}
