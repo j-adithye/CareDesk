@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Staff
+from .models import Staff, DoctorDetails
 from datetime import date
 import re
 
@@ -107,3 +107,54 @@ class StaffSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+
+
+class DoctorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DoctorDetails
+        fields = '__all__'
+        
+    def validate_doctor(self, value):
+        if value.roleid.title.lower() != "doctor":
+            raise serializers.ValidationError(
+                "Only staff with the Doctor role can have doctor details."
+            )
+        return value
+
+    def validate_start_time(self, value):
+        if value.hour < 9:
+            raise serializers.ValidationError(
+                "Doctor's start time cannot be before 9:00 AM."
+            )
+        return value
+
+    def validate_end_time(self, value):
+        if value.hour > 17 or (value.hour == 17 and value.minute > 0):
+            raise serializers.ValidationError(
+                "Doctor's end time cannot be after 5:00 PM."
+            )
+        return value
+
+    def validate_consultation_fees(self, value):
+        if value <= 0:
+            raise serializers.ValidationError(
+                "Consultation fees must be greater than zero."
+            )
+        return value
+
+    def validate(self, attrs):
+        start_time = attrs.get(
+            "start_time",
+            getattr(self.instance, "start_time", None)
+        )
+        end_time = attrs.get(
+            "end_time",
+            getattr(self.instance, "end_time", None)
+        )
+
+        if start_time and end_time and end_time <= start_time:
+            raise serializers.ValidationError({
+                "end_time": "End time must be later than start time."
+            })
+
+        return attrs

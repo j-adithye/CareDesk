@@ -49,6 +49,7 @@ class Staff(AbstractUser):
     address = models.TextField()
     doj = models.DateField()
     salary = models.DecimalField(max_digits=10, decimal_places=2)
+    is_active = models.BooleanField(default=True)
 
     REQUIRED_FIELDS = [
         "email",
