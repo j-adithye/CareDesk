@@ -39,7 +39,13 @@ class Staff(AbstractUser):
     full_name = models.CharField(max_length=100)
     dob = models.DateField()
     phone = models.CharField(max_length=15)
-    gender = models.CharField(max_length=10)
+    gender = models.CharField(
+        max_length=10,
+        choices=[
+            ("Male", "Male"),
+            ("Female", "Female"),
+            ("Other", "Other"),
+        ],)
     address = models.TextField()
     doj = models.DateField()
     salary = models.DecimalField(max_digits=10, decimal_places=2)
