@@ -145,7 +145,7 @@ class PatientNotesLogView(APIView):
     def get(self, request, patientid):
         date_str = request.query_params.get("date")
 
-        notes = Prescription.objects.filter(
+        logs = Prescription.objects.filter(
             appointment__patient_id=patientid
         ).select_related("appointment", "appointment__doctor__doctor")
 
@@ -158,9 +158,9 @@ class PatientNotesLogView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            notes = notes.filter(created_on__date=log_date)
+            logs = logs.filter(created_on__date=log_date)
 
-        notes = notes.order_by("-created_on")
+        logs = logs.order_by("-created_on")
 
         data = [
             {
@@ -168,15 +168,15 @@ class PatientNotesLogView(APIView):
                 "appointment_date": note.appointment.appointment_date,
                 "symptoms": note.symptoms,
                 "diagnosis": note.diagnosis,
+                "notes":note.notes,
                 "created_on": note.created_on,
             }
-            for note in notes
+            for note in logs
         ]
 
         return Response(data)
     
-    
-    
+
 class PatientMedicineLogView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -218,6 +218,8 @@ class PatientMedicineLogView(APIView):
         data = [
             {
                 "medicine_name": item.medicine.name,
+                "category": item.medicine.category,
+                "strength": item.medicine.strength,
                 "quantity": item.quantity_alloted,
                 "diagnosis": item.prescription.diagnosis,
                 "prescription_date": item.prescription.created_on,

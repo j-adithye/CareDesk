@@ -121,6 +121,7 @@ class Prescription(models.Model):
     )
     symptoms = models.TextField()
     diagnosis = models.TextField()
+    notes = models.TextField(blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
 
 
@@ -138,6 +139,8 @@ class Medicine(models.Model):
     name = models.CharField(max_length=100)
     generic_name = models.CharField(max_length=100, blank=True)
     company_name = models.CharField(max_length=100, blank=True)
+    strength = models.CharField(max_length=100, blank=True)    #250mg,500mg etc
+    category = models.CharField(max_length=100)   # tablet or syrup etc
     stock_left = models.PositiveIntegerField(default=0)
     unit_price = models.DecimalField(max_digits=8, decimal_places=2)
     is_active = models.BooleanField(default=True)
@@ -186,7 +189,6 @@ class Billing(models.Model):
 
 class Fee(models.Model):
     # standalone settings table, keep one row
-    discounts = models.DecimalField(max_digits=5, decimal_places=2)
     tax = models.DecimalField(max_digits=5, decimal_places=2)
 
 

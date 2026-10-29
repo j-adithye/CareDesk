@@ -20,11 +20,16 @@ class PrescriptionMedicineSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    strength = serializers.CharField(source="medicine.strength", read_only=True)
+    category = serializers.CharField(source="medicine.category", read_only=True)
+    
     class Meta:
         model = PrescriptionMedicine
         fields = [
             "medicine_id",
             "medicine_name",
+            "strength",
+            "category",
             "quantity_alloted",
             "unit_price",
             "total",
@@ -62,12 +67,14 @@ class PrescriptionSerializer(serializers.ModelSerializer):
     medicines = PrescriptionMedicineSerializer(many=True, required=False)
     tests = PrescriptionTestSerializer(many=True, required=False)
 
+    
     class Meta:
         model = Prescription
         fields = [
             "appointment",
             "symptoms",
             "diagnosis",
+            "notes",
             "created_on",
             "medicines",
             "tests",
