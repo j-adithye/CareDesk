@@ -8,7 +8,7 @@ from rest_framework.response import Response        # builds the JSON response
 from adminmodule.models import Patient
 from . import services                              # our business rules (. = this folder)
 from .permissions import IsReceptionist             # our role rule from section 3
-from .serializers import PatientEditSerializer, PatientSerializer
+from .serializers import DoctorSerializer, PatientEditSerializer, PatientSerializer
 
 
 class PatientViewSet(
@@ -80,4 +80,34 @@ class PatientViewSet(
     @action(detail=True, methods=["post"])          # our own endpoint on ONE patient, POST only
     def disable(self, request, pk=None):            # URL becomes /patients/<id>/disable/ (named after the function)
         services.disable_patient(request.user, pk)  # the service checks the rules and does it
+        
         return Response({"detail": "Patient disabled."})
+
+class DoctorViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    # Read-only: only list and retrieve exist, so there is no way to add or edit a doctor here.
+    serializer_class = DoctorSerializer
+    permission_classes = [IsAuthenticated, IsReceptionist]
+    lookup_value_regex = r"\d+"
+
+    def get_queryset(self):
+        qs = (
+            DoctorDetails.objects
+            .select_related("doctor")          # loads the Staff row in the same query
+            .prefetch_related("weekdays")      # loads all weekdays in one extra query
+            .filter(doctor__is_active=True)    # FR-APT-02: only active doctors are shown
+            .order_by("doctor__full_name")
+        )
+        term = self.request.query_params.get("search", "").strip()
+        if term:
+            # ?search= matches the doctor's name OR specialization
+            qs = qs.filter(Q(doctor__full_name__icontains=term) | Q(specialization__icontains=term))
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        doctors = self.get_queryset()
+        message = ""
+        if request.query_params.get("search") and not doctors.exists():
+            message = "Sorry, there is no such doctor."
+        # Same response shape as the patients list, so the frontend handles both alike
+        return Response({"message": message,
+                        "results": self.get_serializer(doctors, many=True).data})

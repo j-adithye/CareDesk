@@ -1,7 +1,7 @@
 import re                                           # regular expressions, for pattern checks
 from datetime import date                           # lets us get today's date
 from rest_framework import serializers              # DRF's serializer tools
-from adminmodule.models import Patient              # the shared Patient model (we don't make our own)
+from adminmodule.models import DoctorDetails,Patient              # the shared Patient model (we don't make our own)
 
 GENDERS = {"F", "M", "O"}                           # allowed genders, from the document (a set = fast lookup)
 BLOOD_GROUPS = {"A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"}   # the 8 valid blood groups
@@ -24,7 +24,7 @@ class PatientSerializer(serializers.ModelSerializer):   # builds fields from the
     class Meta:                                     # settings for this serializer
         model = Patient                             # which model it works with
         fields = ["id", "full_name", "dob", "gender", "blood_group",
-                  "phone", "address", "created_on", "is_active"]   # fields shown in the JSON
+                "phone", "address", "created_on", "is_active"]   # fields shown in the JSON
         read_only_fields = ["id", "created_on", "is_active"]
         # Visible in responses but ignored if sent in a request:
         # id = registration number (database makes it), is_active = changed only by "disable"
@@ -70,3 +70,21 @@ class PatientEditSerializer(serializers.ModelSerializer):   # used only for PATC
         if extra:
             raise serializers.ValidationError("Only phone and address can be edited.")
         return data
+class DoctorSerializer(serializers.ModelSerializer):
+    """Read-only view of a doctor for the receptionist (used when booking)."""
+
+    # DoctorDetails uses the Staff id as its primary key, so pk is the doctor's id.
+    id = serializers.IntegerField(source="pk", read_only=True)
+
+    # "doctor" points to the Staff row; the doctor's name lives there.
+    full_name = serializers.CharField(source="doctor.full_name", read_only=True)
+
+    # weekdays is a many-to-many link. This shows each weekday as its name
+    # (for example ["Monday", "Wednesday"]) instead of a list of ids.
+    weekdays = serializers.SlugRelatedField(many=True, read_only=True, slug_field="name")
+
+    class Meta:
+        model = DoctorDetails
+        fields = ["id", "full_name", "specialization", "consultation_fees",
+                "weekdays", "start_time", "end_time"]
+        read_only_fields = fields      # nothing here can be changed by the receptionist
