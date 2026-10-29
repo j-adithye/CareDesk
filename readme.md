@@ -56,3 +56,5 @@ The following ER diagram represents the database structure of the CareDeskProjec
 
 ```
 **Note:** Run `makemigrations` and `migrate` after configuring the database connection and defining your Django models.
+
+
