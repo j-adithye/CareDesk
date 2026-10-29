@@ -11,24 +11,8 @@ from .models import LabResult
 from .serializer import LabRequestSerializer, LabResultSerializer
 from .permission import IsLabTechnician
 
-
-class LabRequestViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = LabRequestSerializer
-    permission_classes = [IsAuthenticated, IsLabTechnician]
-
-    def get_queryset(self):
-        queryset = PrescriptionTest.objects.select_related(
-            "prescription__appointment__patient",
-            "test"
-        ).all()
-
-        status = self.request.query_params.get("status")
-
-        if status:
-            queryset = queryset.filter(status__iexact=status)
-
-        return queryset
-
+from datetime import date
+from django.utils import timezone
 
 class LabRequestViewSet(viewsets.ModelViewSet):
     serializer_class = LabRequestSerializer
@@ -36,17 +20,19 @@ class LabRequestViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "patch", "head", "options"]
 
     def get_queryset(self):
-        queryset = PrescriptionTest.objects.select_related(
-            "prescription__appointment__patient",
-            "test"
-        ).all()
+        date_str = self.request.query_params.get("date")
 
-        status = self.request.query_params.get("status")
+        if date_str:
+            try:
+                selected_date = date.fromisoformat(date_str)
+            except ValueError:
+                raise ValidationError({"date": "Use YYYY-MM-DD format."})
+        else:
+            selected_date = timezone.localdate()
 
-        if status:
-            queryset = queryset.filter(status__iexact=status)
-
-        return queryset
+        queryset = queryset.filter(
+            prescription__appointment__appointment_date=selected_date
+        )
 
 class LabRequestStatusViewSet(viewsets.ModelViewSet):
     serializer_class = LabRequestSerializer
@@ -89,13 +75,37 @@ class LabResultViewSet(viewsets.ModelViewSet):
         "get", "post", "patch", "head", "options"
     ]
 
+
     def get_queryset(self):
-        return LabResult.objects.filter(
+        queryset = LabResult.objects.filter(
             technician=self.request.user
         ).select_related(
-            "prescription_test",
-            "technician"
+            "prescription_test__test",
+            "prescription_test__prescription__appointment__patient",
+            "technician",
         )
+
+        # Search results by patient ID
+        patient_id = self.request.query_params.get("patientid")
+
+        if patient_id:
+            if not patient_id.isdigit():
+                raise ValidationError({
+                    "patientid": "Patient ID must be a number."
+                })
+
+            queryset = queryset.filter(
+                prescription_test__prescription__appointment__patient_id=patient_id
+            )
+
+        # Filter results by creation date (optional)
+        date_str = self.request.query_params.get("date")
+
+        if date_str:
+            queryset = queryset.filter(created_at__date=date_str)
+
+        return queryset.order_by("-created_at")
+
 
     def perform_create(self, serializer):
         serializer.save(technician=self.request.user)

@@ -18,7 +18,6 @@ class LabRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrescriptionTest
         fields = [
-            "id",
             "prescription",
             "test",
             "patient_name",
@@ -29,11 +28,9 @@ class LabRequestSerializer(serializers.ModelSerializer):
             "status",
         ]
         read_only_fields = [
-            "id",
             "prescription",
             "test",
             "patient_name",
-            "test_name",
             "quantity_alloted",
             "unit_price",
             "total",
@@ -45,20 +42,21 @@ class LabResultSerializer(serializers.ModelSerializer):
         source="technician.full_name",
         read_only=True
     )
-
+    test_name = serializers.CharField(
+            source="prescription_test.test.test_name",
+            read_only=True
+        )
     class Meta:
         model = LabResult
         fields = [
             "id",
-            "prescription_test",
+            "test_name",
             "technician",
             "technician_name",
             "result_value",
             "unit",
             "reference_range",
             "remarks",
-            "created_at",
-            "updated_at",
         ]
         read_only_fields = [
             "id",
