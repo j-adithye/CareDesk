@@ -64,6 +64,19 @@ class Staff(AbstractUser):
 
     objects = StaffManager()
 
+    REQUIRED_FIELDS = [
+        "email",
+        "full_name",
+        "dob",
+        "phone",
+        "gender",
+        "address",
+        "doj",
+        "salary",
+    ]
+
+    objects = StaffManager()
+
     def __str__(self):
         return self.full_name
 
