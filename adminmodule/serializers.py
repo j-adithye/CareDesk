@@ -158,3 +158,4 @@ class DoctorSerializer(serializers.ModelSerializer):
             })
 
         return attrs
+    
