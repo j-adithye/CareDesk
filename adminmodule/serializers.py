@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Staff, DoctorDetails
+from .models import Staff, DoctorDetails, Appointment
 from datetime import date
 import re
 
@@ -159,3 +159,8 @@ class DoctorSerializer(serializers.ModelSerializer):
 
         return attrs
     
+    
+class AppointmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appointment
+        fields = '__all__'

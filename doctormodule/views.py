@@ -13,7 +13,7 @@ from CareDeskProject.auth import IsSameDoctor
 from rest_framework.permissions import IsAuthenticated
 # Create your views here.
 
-class AppoinmentViewset(viewsets.ModelViewSet):
+class AppointmentViewset(viewsets.ModelViewSet):
     permission_classes = [Roles('Admin','Doctor')]
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
