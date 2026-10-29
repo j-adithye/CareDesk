@@ -2,6 +2,9 @@ __pycache__/
 *.py[cod]
 .venv/
 
-migrations
+*/migrations/
 __pycache__
+/__pycache__
 .vscode
+
+*.cpython/
