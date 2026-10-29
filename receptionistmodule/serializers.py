@@ -1,7 +1,7 @@
 import re                                           # regular expressions, for pattern checks
 from datetime import date                           # lets us get today's date
 from rest_framework import serializers              # DRF's serializer tools
-from adminmodule.models import DoctorDetails,Patient              # the shared Patient model (we don't make our own)
+from adminmodule.models import Appointment,DoctorDetails,Patient              # the shared Patient model (we don't make our own)
 
 GENDERS = {"F", "M", "O"}                           # allowed genders, from the document (a set = fast lookup)
 BLOOD_GROUPS = {"A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"}   # the 8 valid blood groups
@@ -88,3 +88,33 @@ class DoctorSerializer(serializers.ModelSerializer):
         fields = ["id", "full_name", "specialization", "consultation_fees",
                 "weekdays", "start_time", "end_time"]
         read_only_fields = fields      # nothing here can be changed by the receptionist
+
+class AppointmentSerializer(serializers.ModelSerializer):  # Creates a serializer using the existing Appointment model.
+
+    class Meta:  # Defines the serializer's model and fields.
+        model = Appointment  # Uses the existing Appointment table.
+        fields = [  # Lists the appointment fields accepted or returned by the API.
+            "id",  # The existing appointment ID, which also serves as the patient token.
+            "patient",  # The ID of the patient being booked.
+            "doctor",  # The ID of the selected doctor.
+            "appointment_date",  # The requested appointment date.
+            "appointment_time",  # The requested appointment time.
+            "reason",  # The reason for the appointment.
+            "created_on",  # The timestamp when the appointment was created.
+        ]
+        read_only_fields = ["id", "created_on"]  # Prevents clients from choosing the ID or creation timestamp.
+
+    def validate_patient(self, value):  # Validates the selected patient before booking.
+        if not Patient.objects.filter(pk=value.pk, is_active=True).exists():  # Checks that the patient exists and is active.
+            raise serializers.ValidationError("Patient does not exist or is disabled.")  # Rejects invalid or disabled patients.
+        return value  # Returns the validated patient.
+
+    def validate_doctor(self, value):  # Validates the selected doctor before booking.
+        if not DoctorDetails.objects.filter(pk=value.pk, doctor__is_active=True).exists():  # Checks that the doctor is active.
+            raise serializers.ValidationError("Doctor does not exist or is inactive.")  # Rejects an invalid or inactive doctor.
+        return value  # Returns the validated doctor.
+
+    def validate_appointment_date(self, value):  # Validates the requested appointment date.
+        if value < date.today():  # Checks whether the requested date is before today.
+            raise serializers.ValidationError("Appointment date cannot be in the past.")  # Rejects past dates.
+        return value  # Returns the validated date.

@@ -5,11 +5,14 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated   # "must be logged in"
 from rest_framework.response import Response        # builds the JSON response
 
-from adminmodule.models import Patient
-from . import services                              # our business rules (. = this folder)
-from .permissions import IsReceptionist             # our role rule from section 3
-from .serializers import DoctorSerializer, PatientEditSerializer, PatientSerializer
-
+from adminmodule.models import Patient, Appointment,DoctorDetails
+from . import services
+from .services import (
+    book_appointment,             # Imports the appointment-booking service.
+    generate_consultation_bill,   # Imports the consultation-billing service.
+)                                  # our business rules (. = this folder)
+from .permissions import IsReceptionist   # our role rule from section 3
+from .serializers import DoctorSerializer, PatientEditSerializer, PatientSerializer,AppointmentSerializer
 
 class PatientViewSet(
     mixins.ListModelMixin,       # adds GET  /patients/
@@ -111,3 +114,130 @@ class DoctorViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
         # Same response shape as the patients list, so the frontend handles both alike
         return Response({"message": message,
                         "results": self.get_serializer(doctors, many=True).data})
+class AppointmentViewSet(  # Defines the API endpoints for receptionist appointments.
+    mixins.ListModelMixin,  # Enables GET requests to list appointments.
+    mixins.RetrieveModelMixin,  # Enables GET requests to retrieve one appointment.
+    mixins.CreateModelMixin,  # Enables POST requests to create appointments.
+    viewsets.GenericViewSet,  # Provides the common functionality for these API actions.
+):
+    serializer_class = AppointmentSerializer  # Uses the existing serializer to validate and represent appointments.
+    permission_classes = [IsAuthenticated, IsReceptionist]  # Requires an authenticated user with receptionist permission.
+    lookup_value_regex = r"\d+"  # Restricts appointment URL identifiers to numeric IDs.
+
+    def get_queryset(self):  # Defines which appointments can be retrieved through this endpoint.
+        return Appointment.objects.select_related(  # Loads related database records efficiently.
+            "patient", "doctor"  # Retrieves the associated patient and doctor with each appointment.
+        ).order_by("appointment_date", "appointment_time")  # Sorts appointments chronologically.
+
+    def create(self, request, *args, **kwargs): # Handle POST requests to create a new appointment.
+        serializer = self.get_serializer(data=request.data)# Validate the patient, doctor, date, time, and other submitted fields.
+        serializer.is_valid(raise_exception=True)# Raise a 400 Bad Request response if validation fails.
+        appointment = book_appointment(
+            request.user,  # Passes the currently authenticated receptionist.
+            patient_id=serializer.validated_data["patient"].pk,  # Extracts the patient's database ID.
+            doctor_id=serializer.validated_data["doctor"].pk,  # Extracts the doctor's database ID.
+            appointment_date=serializer.validated_data["appointment_date"],  # Passes the requested appointment date.
+            appointment_time=serializer.validated_data["appointment_time"],  # Passes the requested appointment time.
+            reason=serializer.validated_data["reason"],  # Passes the consultation reason.
+        )
+
+        return Response(
+            {
+                "message": "Appointment booked successfully.",# Confirm that the appointment was created.
+                "appointment_id": appointment.pk,# Return the appointment's database ID.
+                "patient_token": appointment.pk,# Use the same appointment ID as the patient token, as you requested.
+                "appointment": self.get_serializer(appointment).data,# Return the saved appointment details.
+            },
+
+            status=status.HTTP_201_CREATED,# Return HTTP 201 Created after successful booking.
+        )
+
+    @action(detail=True, methods=["post"], url_path="generate-bill")# Creates a POST endpoint for generating a bill for one appointment.
+
+    def generate_bill(self, request, pk=None):
+        # Handles requests to generate a consultation bill.
+
+        bill = generate_consultation_bill(request.user, pk)
+        # Calls the billing service using the logged-in receptionist and appointment ID.
+
+        return Response(
+            {
+                "message": "Consultation bill generated successfully.",
+                # Confirms that the bill was generated.
+
+                "appointment_id": int(pk),
+                # Returns the appointment ID, which is also the patient token.
+
+                "bill_id": bill.pk,
+                # Returns the unique database ID of the bill.
+
+                "grand_total": str(bill.grand_total),
+                # Returns the final amount as a string to preserve decimal precision.
+            },
+            status=status.HTTP_201_CREATED,# Returns HTTP 201 to indicate successful bill creation.
+        )
+    @action(detail=True, methods=["patch"], url_path="reschedule")
+    def reschedule(self, request, pk=None):
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        from rest_framework.exceptions import ValidationError
+        from adminmodule.models import Appointment, Prescription
+
+        appointment = self.get_object()
+
+        # Allow rescheduling only at least 2 hours before the appointment.
+        appointment_datetime = timezone.make_aware(
+            datetime.combine(
+                appointment.appointment_date,
+                appointment.appointment_time
+            )
+        )
+
+        if timezone.now() > appointment_datetime - timedelta(hours=2):
+            raise ValidationError({
+                "detail": "Rescheduling is allowed only at least 2 hours before the appointment."
+            })
+
+        # Do not allow rescheduling after a prescription has been created.
+        if Prescription.objects.filter(appointment=appointment).exists():
+            raise ValidationError({
+                "detail": "An appointment with a prescription cannot be rescheduled."
+            })
+
+        # Validate the new appointment details.
+        serializer = self.get_serializer(
+            appointment,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+
+        # Save the new appointment details.
+        serializer.save()
+
+        return Response(
+            {
+                "message": "Appointment rescheduled successfully.",
+                "appointment": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+        data = serializer.validated_data  # Gets the validated appointment details.
+        appointment = services.book_appointment(  # Calls the service that applies the appointment business rules.
+        request.user,  # Passes the currently logged-in receptionist.
+        patient_id=data["patient"].pk,  # Passes the selected patient's database ID.
+        doctor_id=data["doctor"].pk,  # Passes the selected doctor's database ID.
+        appointment_date=data["appointment_date"],  # Passes the validated appointment date.
+        appointment_time=data["appointment_time"],  # Passes the validated appointment time.
+        reason=data["reason"],  # Passes the appointment reason.
+        )
+    
+        return Response(  # Creates the HTTP response for a successful booking.
+            {
+                "message": "Appointment booked successfully.",  # Confirms the booking succeeded.
+                "appointment_id": appointment.pk,  # Returns the appointment's existing database ID.
+                "patient_token": appointment.pk,  # Uses that same ID as the patient token.
+                "appointment": self.get_serializer(appointment).data,  # Returns the saved appointment details.
+            },
+            status=status.HTTP_201_CREATED,  # Returns HTTP 201 to indicate a resource was created.
+            )
