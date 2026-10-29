@@ -11,19 +11,25 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-#r*a)kl!z7v#7-milv6k&7oxq1$pj0so7c$yw49u27-d3d61pv'
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = []
 
@@ -83,11 +89,11 @@ WSGI_APPLICATION = 'CareDeskProject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'cmsdb',
-        'USER': 'root',
-        'PASSWORD': '1234',
-        'HOST' : '127.0.0.1',
-        'PORT' : '3306'
+        'NAME': os.environ.get("DB_NAME", "cmsdb"),
+        'USER': os.environ["DB_USER"],
+        'PASSWORD': os.environ["DB_PASSWORD"],
+        'HOST': os.environ.get("DB_HOST", "127.0.0.1"),
+        'PORT': os.environ.get("DB_PORT", "3306"),
     }
 }
 
@@ -135,3 +141,17 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "adminmodule.Staff"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
