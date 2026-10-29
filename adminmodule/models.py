@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractUser, UserManager
+from django.contrib.auth.models import AbstractUser,UserManager
 from django.db import models
 
 
@@ -39,10 +39,30 @@ class Staff(AbstractUser):
     full_name = models.CharField(max_length=100)
     dob = models.DateField()
     phone = models.CharField(max_length=15)
-    gender = models.CharField(max_length=10)
+    gender = models.CharField(
+        max_length=10,
+        choices=[
+            ("Male", "Male"),
+            ("Female", "Female"),
+            ("Other", "Other"),
+        ],)
     address = models.TextField()
     doj = models.DateField()
     salary = models.DecimalField(max_digits=10, decimal_places=2)
+    is_active = models.BooleanField(default=True)
+
+    REQUIRED_FIELDS = [
+        "email",
+        "full_name",
+        "dob",
+        "phone",
+        "gender",
+        "address",
+        "doj",
+        "salary",
+    ]
+
+    objects = StaffManager()
 
     REQUIRED_FIELDS = [
         "email",
@@ -59,7 +79,6 @@ class Staff(AbstractUser):
 
     def __str__(self):
         return self.full_name
-
 
 class Weekday(models.Model):
     name = models.CharField(max_length=10, unique=True)
@@ -115,6 +134,7 @@ class Prescription(models.Model):
     )
     symptoms = models.TextField()
     diagnosis = models.TextField()
+    notes = models.TextField(blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
 
 
@@ -132,6 +152,8 @@ class Medicine(models.Model):
     name = models.CharField(max_length=100)
     generic_name = models.CharField(max_length=100, blank=True)
     company_name = models.CharField(max_length=100, blank=True)
+    strength = models.CharField(max_length=100, blank=True)    #250mg,500mg etc
+    category = models.CharField(max_length=100)   # tablet or syrup etc
     stock_left = models.PositiveIntegerField(default=0)
     unit_price = models.DecimalField(max_digits=8, decimal_places=2)
     is_active = models.BooleanField(default=True)
@@ -180,7 +202,6 @@ class Billing(models.Model):
 
 class Fee(models.Model):
     # standalone settings table, keep one row
-    discounts = models.DecimalField(max_digits=5, decimal_places=2)
     tax = models.DecimalField(max_digits=5, decimal_places=2)
 
 

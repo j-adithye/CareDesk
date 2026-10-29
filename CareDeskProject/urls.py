@@ -17,15 +17,16 @@ Including another URLconf
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib import admin
 from django.urls import path,include
+from .auth import LoginView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    path('api/login/', LoginView.as_view(), name='login'),
     
     path('api/admin/',include('adminmodule.urls')),
     path('api/doctor/',include('doctormodule.urls')),
     path('api/lab/',include('labmodule.urls')),
     path('api/receptionist/',include('receptionistmodule.urls')),
-    path('api/auth/login/', TokenObtainPairView.as_view()),
-    path('api/auth/refresh/', TokenRefreshView.as_view()),
     path('api/pharmacist/',include('pharmacistmodule.urls')),
 ]
