@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from adminmodule.models import Appointment, Prescription, PrescriptionMedicine, PrescriptionTest, Medicine, Test
+from .models import Appointment, Prescription, PrescriptionMedicine, PrescriptionTest, Medicine, Test
 from django.db import transaction
 
 class AppointmentSerializer(serializers.ModelSerializer):
@@ -110,4 +110,5 @@ class PrescriptionSerializer(serializers.ModelSerializer):
             )
 
         return prescription
+        
         
