@@ -5,7 +5,7 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
-
+from rest_framework.decorators import action
 from adminmodule.models import PrescriptionTest
 from .models import LabResult
 from .serializer import LabRequestSerializer, LabResultSerializer
@@ -30,10 +30,31 @@ class LabRequestViewSet(viewsets.ModelViewSet):
         else:
             selected_date = timezone.localdate()
 
+        queryset = PrescriptionTest.objects.select_related(
+            "prescription__appointment__patient",
+            "test"
+        )
+
         queryset = queryset.filter(
             prescription__appointment__appointment_date=selected_date
         )
 
+    @action(detail=True, methods=["patch"], url_path="issue")
+    def issue(self, request, pk=None):
+        test = self.get_object()
+
+        if test.status != "PENDING":
+            raise ValidationError("Only pending tests can be issued.")
+
+        test.status = "ISSUED"
+        test.save(update_fields=["status"])
+
+        return Response({
+            "message": "Test issued successfully.",
+            "prescription_test_id": test.pk,
+            "status": test.status
+        }, status=status.HTTP_200_OK)
+    
 class LabRequestStatusViewSet(viewsets.ModelViewSet):
     serializer_class = LabRequestSerializer
     permission_classes = [IsAuthenticated, IsLabTechnician]
