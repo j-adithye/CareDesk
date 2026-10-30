@@ -130,6 +130,12 @@ class BillingSerializer(serializers.ModelSerializer):
         source="prescription.appointment.id",
         read_only=True
     )
+    
+    consultation_fees = serializers.DecimalField(
+        source = "prescription.appointment.doctor.consultation_fees",
+        read_only = True,
+        max_digits=8, decimal_places=2
+    )
 
     class Meta:
         model = Billing

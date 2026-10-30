@@ -131,18 +131,13 @@ class AppointmentViewSet(  # Defines the API endpoints for receptionist appointm
     permission_classes = [IsAuthenticated, IsReceptionist]  # Requires an authenticated user with receptionist permission.
     lookup_value_regex = r"\d+"  # Restricts appointment URL identifiers to numeric IDs.
 class BillingListView(generics.ListAPIView):
-    # Retrieve all generated bills.
     queryset = Billing.objects.select_related(
-        "prescription__appointment__patient"
+        "prescription__appointment__patient",
+        "prescription__appointment__doctor"
     ).order_by("-created_on")
 
-    # Convert bill records into JSON.
     serializer_class = BillingSerializer
-
-    def get_queryset(self):  # Defines which appointments can be retrieved through this endpoint.
-        return Appointment.objects.select_related(  # Loads related database records efficiently.
-            "patient", "doctor"  # Retrieves the associated patient and doctor with each appointment.
-        ).order_by("appointment_date", "appointment_time")  # Sorts appointments chronologically.
+    permission_classes = [IsAuthenticated, IsReceptionist]  # Sorts appointments chronologically.
 
     def create(self, request, *args, **kwargs): # Handle POST requests to create a new appointment.
         serializer = self.get_serializer(data=request.data)# Validate the patient, doctor, date, time, and other submitted fields.
