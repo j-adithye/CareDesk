@@ -2,6 +2,7 @@ import re                                           # regular expressions, for p
 from datetime import date                           # lets us get today's date
 from rest_framework import serializers              # DRF's serializer tools
 from adminmodule.models import Appointment,DoctorDetails,Patient              # the shared Patient model (we don't make our own)
+from adminmodule.models import Billing
 
 GENDERS = {"F", "M", "O"}                           # allowed genders, from the document (a set = fast lookup)
 BLOOD_GROUPS = {"A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"}   # the 8 valid blood groups
@@ -118,3 +119,28 @@ class AppointmentSerializer(serializers.ModelSerializer):  # Creates a serialize
         if value < date.today():  # Checks whether the requested date is before today.
             raise serializers.ValidationError("Appointment date cannot be in the past.")  # Rejects past dates.
         return value  # Returns the validated date.
+    
+class BillingSerializer(serializers.ModelSerializer):
+    patient_name = serializers.CharField(
+        source="prescription.appointment.patient.full_name",
+        read_only=True
+    )
+
+    appointment_id = serializers.IntegerField(
+        source="prescription.appointment.id",
+        read_only=True
+    )
+
+    class Meta:
+        model = Billing
+        fields = [
+            "prescription",
+            "appointment_id",
+            "patient_name",
+            "consultation_fees",
+            "sub_total",
+            "taxes",
+            "grand_total",
+            "created_on",
+            "paid_on",
+        ]

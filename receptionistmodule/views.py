@@ -4,15 +4,22 @@ from rest_framework.decorators import action        # for our own extra endpoint
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated   # "must be logged in"
 from rest_framework.response import Response        # builds the JSON response
+from rest_framework import generics
 
-from adminmodule.models import Patient, Appointment,DoctorDetails
+from adminmodule.models import Patient, Appointment,DoctorDetails,Billing
 from . import services
 from .services import (
     book_appointment,             # Imports the appointment-booking service.
     generate_consultation_bill,   # Imports the consultation-billing service.
 )                                  # our business rules (. = this folder)
 from .permissions import IsReceptionist   # our role rule from section 3
-from .serializers import DoctorSerializer, PatientEditSerializer, PatientSerializer,AppointmentSerializer
+from .serializers import (
+        DoctorSerializer, 
+        PatientEditSerializer, 
+        PatientSerializer,
+        AppointmentSerializer,
+        BillingSerializer,
+        )
 
 class PatientViewSet(
     mixins.ListModelMixin,       # adds GET  /patients/
@@ -123,6 +130,14 @@ class AppointmentViewSet(  # Defines the API endpoints for receptionist appointm
     serializer_class = AppointmentSerializer  # Uses the existing serializer to validate and represent appointments.
     permission_classes = [IsAuthenticated, IsReceptionist]  # Requires an authenticated user with receptionist permission.
     lookup_value_regex = r"\d+"  # Restricts appointment URL identifiers to numeric IDs.
+class BillingListView(generics.ListAPIView):
+    # Retrieve all generated bills.
+    queryset = Billing.objects.select_related(
+        "prescription__appointment__patient"
+    ).order_by("-created_on")
+
+    # Convert bill records into JSON.
+    serializer_class = BillingSerializer
 
     def get_queryset(self):  # Defines which appointments can be retrieved through this endpoint.
         return Appointment.objects.select_related(  # Loads related database records efficiently.
@@ -222,22 +237,27 @@ class AppointmentViewSet(  # Defines the API endpoints for receptionist appointm
             },
             status=status.HTTP_200_OK
         )
-        data = serializer.validated_data  # Gets the validated appointment details.
-        appointment = services.book_appointment(  # Calls the service that applies the appointment business rules.
-        request.user,  # Passes the currently logged-in receptionist.
-        patient_id=data["patient"].pk,  # Passes the selected patient's database ID.
-        doctor_id=data["doctor"].pk,  # Passes the selected doctor's database ID.
-        appointment_date=data["appointment_date"],  # Passes the validated appointment date.
-        appointment_time=data["appointment_time"],  # Passes the validated appointment time.
-        reason=data["reason"],  # Passes the appointment reason.
-        )
     
-        return Response(  # Creates the HTTP response for a successful booking.
-            {
-                "message": "Appointment booked successfully.",  # Confirms the booking succeeded.
-                "appointment_id": appointment.pk,  # Returns the appointment's existing database ID.
-                "patient_token": appointment.pk,  # Uses that same ID as the patient token.
-                "appointment": self.get_serializer(appointment).data,  # Returns the saved appointment details.
-            },
-            status=status.HTTP_201_CREATED,  # Returns HTTP 201 to indicate a resource was created.
+    @action(detail=True, methods=["get"], url_path="bill")
+    def view_bill(self, request, pk=None):
+        # Get the selected appointment.
+        appointment = self.get_object()
+
+        try:
+            # Find the bill associated with this appointment.
+            bill = Billing.objects.select_related(
+                "prescription__appointment__patient"
+            ).get(prescription__appointment=appointment)
+
+        except Billing.DoesNotExist:
+            # Return an error if no bill exists.
+            return Response(
+                {"detail": "No bill found for this appointment."},
+                status=status.HTTP_404_NOT_FOUND
             )
+
+        # Convert the bill into JSON.
+        serializer = BillingSerializer(bill)
+
+        # Return the bill details.
+        return Response(serializer.data)
