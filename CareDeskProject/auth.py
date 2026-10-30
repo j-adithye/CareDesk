@@ -3,7 +3,6 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import BasePermission
 
-
 class IsSameDoctor(BasePermission):
     message = "You can only access your own appointments."
 
@@ -49,7 +48,6 @@ class LoginView(TokenObtainPairView):
 
 
 def Roles(*roles):
-
     class RolePermission(BasePermission):
         message = f"Access denied. Required roles: {', '.join(roles)}."
 
