@@ -17,18 +17,14 @@ from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-load_dotenv(BASE_DIR / ".env")
-
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ["SECRET_KEY"]
+SECRET_KEY = 'django-insecure-#r*a)kl!z7v#7-milv6k&7oxq1$pj0so7c$yw49u27-d3d61pv'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "False") == "True"
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -88,11 +84,11 @@ WSGI_APPLICATION = 'CareDeskProject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get("DB_NAME", "cmsdb"),
-        'USER': os.environ["DB_USER"],
-        'PASSWORD': os.environ["DB_PASSWORD"],
-        'HOST': os.environ.get("DB_HOST", "127.0.0.1"),
-        'PORT': os.environ.get("DB_PORT", "3306"),
+        'NAME': "cmsdb",
+        'USER': "root",
+        'PASSWORD': "1234",
+        'HOST': "127.0.0.1",
+        'PORT':"3306",
     }
 }
 
