@@ -1,12 +1,14 @@
 
 
-
-# Create your models here.
+# Lab module model definitions.
+# The main entity here is LabResult, which stores technician-submitted test outcomes.
 from django.db import models
 from adminmodule.models import Staff, PrescriptionTest
 
 
 class LabResult(models.Model):
+    """Stores a single test result and links it to the related prescription test."""
+
     prescription_test = models.OneToOneField(
         PrescriptionTest,
         on_delete=models.PROTECT,
@@ -28,4 +30,5 @@ class LabResult(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
+        """Return a readable identifier for the result record."""
         return f"Lab Result {self.pk}"

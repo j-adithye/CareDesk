@@ -3,14 +3,21 @@ from .models import Staff, DoctorDetails, Appointment
 from datetime import date
 import re
 
+# Shared validation helpers for admin module APIs.
+# These serializers enforce form validation before data reaches the database.
+
+
 class StaffSerializer(serializers.ModelSerializer):
+    """Validate and persist staff records with role and identity checks."""
+
     password = serializers.CharField(write_only=True)
 
     class Meta:
         model = Staff
         exclude = ['groups', 'user_permissions']
-        
+
     def validate_full_name(self, value):
+        """Ensure names are long enough and contain only letters/spaces."""
         value = value.strip()
 
         if len(value) < 2:
@@ -24,8 +31,9 @@ class StaffSerializer(serializers.ModelSerializer):
             )
 
         return value
-        
+
     def validate_phone(self, value):
+        """Ensure the phone number is exactly 10 digits long."""
         if not value.isdigit() or len(value) != 10:
             raise serializers.ValidationError(
                 "Phone number must contain exactly 10 digits."
@@ -33,6 +41,7 @@ class StaffSerializer(serializers.ModelSerializer):
         return value
 
     def validate_gender(self, value):
+        """Restrict gender to the approved staff values."""
         allowed_genders = ["Male", "Female", "Other"]
 
         if value not in allowed_genders:
@@ -42,6 +51,7 @@ class StaffSerializer(serializers.ModelSerializer):
         return value
 
     def validate_dob(self, value):
+        """Reject future dates of birth."""
         if value > date.today():
             raise serializers.ValidationError(
                 "Date of birth cannot be in the future."
@@ -49,6 +59,7 @@ class StaffSerializer(serializers.ModelSerializer):
         return value
 
     def validate_doj(self, value):
+        """Reject future dates of joining."""
         if value > date.today():
             raise serializers.ValidationError(
                 "Date of joining cannot be in the future."
@@ -56,6 +67,7 @@ class StaffSerializer(serializers.ModelSerializer):
         return value
 
     def validate_salary(self, value):
+        """Reject negative salary values."""
         if value < 0:
             raise serializers.ValidationError(
                 "Salary cannot be negative."
@@ -63,10 +75,10 @@ class StaffSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        """Ensure the staff member is of working age and joined after date of birth."""
         dob = attrs.get("dob")
         doj = attrs.get("doj")
 
-        # For partial updates, use the existing values if not supplied.
         if self.instance:
             dob = dob or self.instance.dob
             doj = doj or self.instance.doj
@@ -77,7 +89,6 @@ class StaffSerializer(serializers.ModelSerializer):
                     "doj": "Date of joining cannot be before date of birth."
                 })
 
-            # Calculate age on the joining date.
             age = doj.year - dob.year - (
                 (doj.month, doj.day) < (dob.month, dob.day)
             )
@@ -90,6 +101,7 @@ class StaffSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        """Create a staff account and hash the password before saving."""
         password = validated_data.pop('password')
         staff = Staff(**validated_data)
         staff.set_password(password)
@@ -97,6 +109,7 @@ class StaffSerializer(serializers.ModelSerializer):
         return staff
 
     def update(self, instance, validated_data):
+        """Update staff details and hash the password only when a new one is supplied."""
         password = validated_data.pop('password', None)
 
         for attr, value in validated_data.items():
@@ -110,11 +123,14 @@ class StaffSerializer(serializers.ModelSerializer):
 
 
 class DoctorSerializer(serializers.ModelSerializer):
+    """Validate doctor details like schedule and consultation fee rules."""
+
     class Meta:
         model = DoctorDetails
         fields = '__all__'
-        
+
     def validate_doctor(self, value):
+        """Allow only staff members whose role is Doctor to be assigned as doctors."""
         if value.roleid.title.lower() != "doctor":
             raise serializers.ValidationError(
                 "Only staff with the Doctor role can have doctor details."
@@ -122,6 +138,7 @@ class DoctorSerializer(serializers.ModelSerializer):
         return value
 
     def validate_start_time(self, value):
+        """Ensure doctors begin work no earlier than 9:00 AM."""
         if value.hour < 9:
             raise serializers.ValidationError(
                 "Doctor's start time cannot be before 9:00 AM."
@@ -129,6 +146,7 @@ class DoctorSerializer(serializers.ModelSerializer):
         return value
 
     def validate_end_time(self, value):
+        """Ensure doctors finish no later than 5:00 PM."""
         if value.hour > 17 or (value.hour == 17 and value.minute > 0):
             raise serializers.ValidationError(
                 "Doctor's end time cannot be after 5:00 PM."
@@ -136,6 +154,7 @@ class DoctorSerializer(serializers.ModelSerializer):
         return value
 
     def validate_consultation_fees(self, value):
+        """Require consultation fees to be greater than zero."""
         if value <= 0:
             raise serializers.ValidationError(
                 "Consultation fees must be greater than zero."
@@ -143,6 +162,7 @@ class DoctorSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        """Ensure the doctor's working window is valid and not reversed."""
         start_time = attrs.get(
             "start_time",
             getattr(self.instance, "start_time", None)
@@ -158,9 +178,11 @@ class DoctorSerializer(serializers.ModelSerializer):
             })
 
         return attrs
-    
-    
+
+
 class AppointmentSerializer(serializers.ModelSerializer):
+    """Serializer for appointment data used by the admin module."""
+
     class Meta:
         model = Appointment
         fields = '__all__'

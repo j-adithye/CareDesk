@@ -3,8 +3,12 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from adminmodule.models import Role, Staff, Weekday, DoctorDetails, Fee
 
+# Seed script used for local development and QA testing.
+# It creates representative staff roles, doctors, and fee settings so the APIs can be tested quickly.
+
 
 def make_staff(username, role, full_name, phone):
+    """Return an existing staff user or create a new one with the supplied profile."""
     if Staff.objects.filter(username=username).exists():
         return Staff.objects.get(username=username)
     return Staff.objects.create_user(
@@ -17,9 +21,12 @@ def make_staff(username, role, full_name, phone):
 
 
 class Command(BaseCommand):
+    """Create dummy roles, staff, doctors and fee settings for testing."""
+
     help = "Create dummy roles, staff, doctors and fee settings for testing"
 
     def handle(self, *args, **options):
+        """Create a minimal dataset that supports receptionist and doctor flows."""
         roles = {t: Role.objects.get_or_create(title=t)[0]
                 for t in ["Administrator", "Doctor", "Receptionist", "Pharmacist", "Lab Technician"]}
 

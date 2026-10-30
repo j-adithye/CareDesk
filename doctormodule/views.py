@@ -13,33 +13,41 @@ from CareDeskProject.auth import IsSameDoctor
 from rest_framework.permissions import IsAuthenticated
 
 from datetime import datetime
-# Create your views here.
+
+# Doctor module views handle appointment access, prescription creation,
+# and patient medical history retrieval for the assigned doctor.
+
 
 class AppointmentViewset(viewsets.ModelViewSet):
-    permission_classes = [Roles('Admin','Doctor')]
+    """Generic appointment endpoint for admin and doctor access."""
+
+    permission_classes = [Roles('Admin', 'Doctor')]
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
-    
-    
-    
+
+
 class DoctorAppointmentsView(generics.ListAPIView):
+    """List the appointments scheduled for a specific doctor today."""
+
     serializer_class = AppointmentSerializer
     permission_classes = [IsAuthenticated, IsSameDoctor]
 
     def get_queryset(self):
+        """Return only the current day's appointments for the matched doctor."""
         return Appointment.objects.filter(
             doctor_id=self.kwargs["doctorid"],
-            appointment_date= timezone.localdate()
+            appointment_date=timezone.localdate()
         )
-        
-        
+
+
 class PrescriptionView(APIView):
+    """Create and read prescriptions tied to an appointment."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, doctorid, appointmentid):
-
-        # Verify the logged-in user is the specified doctor
+        """Create a prescription only when the caller is the appointed doctor."""
+        # Verify the logged-in user is the specified doctor.
         if (
             request.user.roleid.title.lower() != "doctor"
             or request.user.pk != doctorid
@@ -49,14 +57,14 @@ class PrescriptionView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        # Find the appointment belonging to this doctor
+        # Find the appointment belonging to this doctor.
         appointment = get_object_or_404(
             Appointment,
             pk=appointmentid,
             doctor_id=doctorid
         )
 
-        # Prevent duplicate prescriptions
+        # Prevent duplicate prescriptions.
         if Prescription.objects.filter(appointment=appointment).exists():
             return Response(
                 {"error": "A prescription already exists for this appointment."},
@@ -71,8 +79,9 @@ class PrescriptionView(APIView):
             serializer.data,
             status=status.HTTP_201_CREATED
         )
-        
+
     def get(self, request, doctorid, appointmentid):
+        """Fetch the prescription for an appointment if it exists."""
         if (
             request.user.roleid.title.lower() != "doctor"
             or request.user.pk != doctorid
@@ -98,12 +107,15 @@ class PrescriptionView(APIView):
 
         serializer = PrescriptionSerializer(prescription)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    
+
+
 class PatientTestReportsView(APIView):
+    """Return lab results for a patient, optionally filtered by report date."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, patientid):
+        """Return a list of lab reports linked to the given patient."""
         date_str = request.query_params.get("date")
 
         results = LabResult.objects.filter(
@@ -119,11 +131,10 @@ class PatientTestReportsView(APIView):
                 )
             results = results.filter(created_at__date=report_date)
 
-        
         results = results.select_related(
             "prescription_test__test"
         ).order_by("-created_at")
-        
+
         data = [
             {
                 "test_name": result.prescription_test.test.test_name,
@@ -137,12 +148,15 @@ class PatientTestReportsView(APIView):
         ]
 
         return Response(data)
-    
-    
+
+
 class PatientNotesLogView(APIView):
+    """Return patient prescription notes and diagnosis summaries by date."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, patientid):
+        """Retrieve note history for a patient, optionally filtered to a day."""
         date_str = request.query_params.get("date")
 
         logs = Prescription.objects.filter(
@@ -168,19 +182,22 @@ class PatientNotesLogView(APIView):
                 "appointment_date": note.appointment.appointment_date,
                 "symptoms": note.symptoms,
                 "diagnosis": note.diagnosis,
-                "notes":note.notes,
+                "notes": note.notes,
                 "created_on": note.created_on,
             }
             for note in logs
         ]
 
         return Response(data)
-    
+
 
 class PatientMedicineLogView(APIView):
+    """Return the medication history for a patient within a date range."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, patientid):
+        """Return all prescriptions and prescribed medicine details in a time window."""
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 

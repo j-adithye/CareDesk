@@ -14,12 +14,18 @@ from .permission import IsLabTechnician
 from datetime import date
 from django.utils import timezone
 
+# Lab module views coordinate request listing and result submission for technicians.
+
+
 class LabRequestViewSet(viewsets.ModelViewSet):
+    """Expose lab requests and allow technicians to mark a request as issued."""
+
     serializer_class = LabRequestSerializer
     permission_classes = [IsAuthenticated, IsLabTechnician]
     http_method_names = ["get", "patch", "head", "options"]
 
     def get_queryset(self):
+        """Return test requests for the selected day or the current date by default."""
         date_str = self.request.query_params.get("date")
 
         if date_str:
@@ -38,9 +44,11 @@ class LabRequestViewSet(viewsets.ModelViewSet):
         queryset = queryset.filter(
             prescription__appointment__appointment_date=selected_date
         )
+        return queryset
 
     @action(detail=True, methods=["patch"], url_path="issue")
     def issue(self, request, pk=None):
+        """Mark a pending lab request as issued when the technician processes it."""
         test = self.get_object()
 
         if test.status != "PENDING":
@@ -54,19 +62,24 @@ class LabRequestViewSet(viewsets.ModelViewSet):
             "prescription_test_id": test.pk,
             "status": test.status
         }, status=status.HTTP_200_OK)
-    
+
+
 class LabRequestStatusViewSet(viewsets.ModelViewSet):
+    """Read and patch the status of lab requests without changing the original request object."""
+
     serializer_class = LabRequestSerializer
     permission_classes = [IsAuthenticated, IsLabTechnician]
     http_method_names = ["get", "patch", "head", "options"]
 
     def get_queryset(self):
+        """Return all prescription tests with related patient and test metadata."""
         return PrescriptionTest.objects.select_related(
             "prescription__appointment__patient",
             "test"
         ).all()
 
     def update(self, request, *args, **kwargs):
+        """Allow partial patching of a lab request status only."""
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
 
@@ -83,21 +96,20 @@ class LabRequestStatusViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return_response = serializer.data
-
-        from rest_framework.response import Response
-        return Response(return_response)
+        return Response(serializer.data)
 
 
 class LabResultViewSet(viewsets.ModelViewSet):
+    """Store and retrieve laboratory results created by a technician."""
+
     serializer_class = LabResultSerializer
     permission_classes = [IsAuthenticated, IsLabTechnician]
     http_method_names = [
         "get", "post", "patch", "head", "options"
     ]
 
-
     def get_queryset(self):
+        """Return results created by the active technician and filter optionally by patient/date."""
         queryset = LabResult.objects.filter(
             technician=self.request.user
         ).select_related(
@@ -106,9 +118,7 @@ class LabResultViewSet(viewsets.ModelViewSet):
             "technician",
         )
 
-        # Search results by patient ID
         patient_id = self.request.query_params.get("patientid")
-
         if patient_id:
             if not patient_id.isdigit():
                 raise ValidationError({
@@ -119,14 +129,12 @@ class LabResultViewSet(viewsets.ModelViewSet):
                 prescription_test__prescription__appointment__patient_id=patient_id
             )
 
-        # Filter results by creation date (optional)
         date_str = self.request.query_params.get("date")
-
         if date_str:
             queryset = queryset.filter(created_at__date=date_str)
 
         return queryset.order_by("-created_at")
 
-
     def perform_create(self, serializer):
+        """Attach the requesting technician to the newly created lab result."""
         serializer.save(technician=self.request.user)

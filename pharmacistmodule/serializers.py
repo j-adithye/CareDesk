@@ -5,7 +5,13 @@ from rest_framework import serializers
 from adminmodule.models import Medicine, PrescriptionMedicine
 
 
+# Pharmacist serializers for medicine catalog actions and prescription-line review.
+# They validate input values and format the response payloads used by the UI.
+
+
 class MedicineSerializer(serializers.ModelSerializer):
+    """Validate medicine creation payloads and expose inventory details."""
+
     name = serializers.CharField(
         max_length=100,
         min_length=3,
@@ -27,6 +33,8 @@ class MedicineSerializer(serializers.ModelSerializer):
 
 
 class AddStockSerializer(serializers.Serializer):
+    """Validate the quantity added to an existing medicine stock record."""
+
     quantity = serializers.IntegerField(
         min_value=1,
         max_value=1_000_000,
@@ -38,6 +46,8 @@ class AddStockSerializer(serializers.Serializer):
 
 
 class PrescriptionLineSerializer(serializers.ModelSerializer):
+    """Expose a prescription medicine line to the pharmacist issue workflow."""
+
     prescription_id = serializers.IntegerField(read_only=True)
     patient_name = serializers.CharField(source="prescription.appointment.patient.full_name", read_only=True)
     doctor_name = serializers.CharField(source="prescription.appointment.doctor.doctor.full_name", read_only=True)

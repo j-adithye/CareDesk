@@ -11,17 +11,18 @@ ISSUED = "ISSUED"
 
 
 def _require_pharmacist(user):
-    # Second authorisation check in the service layer (NFR-SEC-04).
+    """Ensure that the caller is an authenticated Pharmacist before running business logic."""
     if not has_role(user, "Pharmacist"):
         raise PermissionDenied("Not allowed. Required role: Pharmacist.")
 
 
 def _log(staff, action, details):
-    # Called after the business action succeeded, never with secrets (FR-LOG-02/03).
+    """Persist a human-readable activity message for pharmacist actions."""
     ActivityLog.objects.create(staff=staff, message=f"{action} {details}"[:255])
 
 
 def _locked_medicine(pk):
+    """Return a medicine row under lock so stock changes are safe from concurrent edits."""
     try:
         return Medicine.objects.select_for_update().get(pk=pk)
     except Medicine.DoesNotExist:
@@ -49,7 +50,7 @@ def add_medicine(user, *, name, generic_name, company_name, unit_price):
 
 
 def disable_medicine(user, pk):
-    """FR-PHM-04: soft delete."""
+    """FR-PHM-04: soft delete the medicine by setting it inactive."""
     _require_pharmacist(user)
     with transaction.atomic():
         medicine = _locked_medicine(pk)
@@ -101,7 +102,6 @@ def issue_line(user, pk):
 
         medicine.stock_left -= line.quantity_alloted
         medicine.save(update_fields=["stock_left"])
-        # unit_price and total stay as copied by the doctor when the prescription was saved (A11).
         line.status = ISSUED
         line.save(update_fields=["status"])
         _log(

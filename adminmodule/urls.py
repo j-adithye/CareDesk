@@ -1,18 +1,17 @@
-from django.urls import path,include
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import StaffViewset,DoctorViewset, AppointmentViewset
+from .views import StaffViewset, DoctorViewset, AppointmentViewset
 
 
-#routing
+# Router for the admin API so the app can expose list/create/update endpoints
+# without manually defining each route.
 router = DefaultRouter()
-router.register('staffs',StaffViewset, basename='staff')
-router.register('doctors',DoctorViewset, basename='doctors')
-router.register('appointments',AppointmentViewset, basename='appointments')
-
+router.register('staffs', StaffViewset, basename='staff')
+router.register('doctors', DoctorViewset, basename='doctors')
+router.register('appointments', AppointmentViewset, basename='appointments')
 
 
 urlpatterns = [
-    #root
-    path('',include(router.urls)),
-       
+    # Include all router-generated admin routes at the app root.
+    path('', include(router.urls)),
 ]
