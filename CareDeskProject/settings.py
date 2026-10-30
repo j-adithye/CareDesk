@@ -17,7 +17,6 @@ from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -85,11 +84,11 @@ WSGI_APPLICATION = 'CareDeskProject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'cmsdb',
-        'USER': 'root',
-        'PASSWORD': '1234',
-        'HOST' : '127.0.0.1',
-        'PORT' : '3306'
+        'NAME': "cmsdb",
+        'USER': "root",
+        'PASSWORD': "1234",
+        'HOST': "127.0.0.1",
+        'PORT':"3306",
     }
 }
 
